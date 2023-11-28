@@ -162,7 +162,7 @@ def plot_images(images, targets, paths=None, fname='images.jpg', names=None, max
                 color = colors[cls % len(colors)]
                 cls = names[cls] if names else cls
                 if labels or conf[j] > 0.25:  # 0.25 conf thresh
-                    label = '%s' % cls if labels else '%s %.1f' % (cls, conf[j])
+                    label = f'{cls}' if labels else '%s %.1f' % (cls, conf[j])
                     plot_one_box(box, mosaic, label=label, color=color, line_thickness=tl)
 
         # Draw image filename labels
@@ -236,7 +236,7 @@ def plot_study_txt(f='study.txt', x=None):  # from utils.general import *; plot_
     ax = ax.ravel()
 
     fig2, ax2 = plt.subplots(1, 1, figsize=(8, 4), tight_layout=True)
-    for f in ['study/study_coco_yolo%s.txt' % x for x in ['s', 'm', 'l', 'x']]:
+    for f in [f'study/study_coco_yolo{x}.txt' for x in ['s', 'm', 'l', 'x']]:
         y = np.loadtxt(f, dtype=np.float32, usecols=[0, 1, 2, 3, 7, 8, 9], ndmin=2).T
         x = np.arange(y.shape[1]) if x is None else np.array(x)
         s = ['P', 'R', 'mAP@.5', 'mAP@.5:.95', 't_inference (ms/img)', 't_NMS (ms/img)', 't_total (ms/img)']
@@ -356,7 +356,9 @@ def plot_results(start=0, stop=0, bucket='', id=(), labels=(), save_dir=''):
         os.system(c)
     else:
         files = glob.glob(str(Path(save_dir) / '*.txt')) + glob.glob('../../Downloads/results*.txt')
-    assert len(files), 'No results.txt files found in %s, nothing to plot.' % os.path.abspath(save_dir)
+    assert len(
+        files
+    ), f'No results.txt files found in {os.path.abspath(save_dir)}, nothing to plot.'
     for fi, f in enumerate(files):
         try:
             results = np.loadtxt(f, usecols=[2, 3, 4, 8, 9, 12, 13, 14, 10, 11], ndmin=2).T
@@ -373,7 +375,7 @@ def plot_results(start=0, stop=0, bucket='', id=(), labels=(), save_dir=''):
                 # if i in [5, 6, 7]:  # share train and val loss y axes
                 #     ax[i].get_shared_y_axes().join(ax[i], ax[i - 5])
         except Exception as e:
-            print('Warning: Plotting error for %s; %s' % (f, e))
+            print(f'Warning: Plotting error for {f}; {e}')
 
     fig.tight_layout()
     ax[1].legend()

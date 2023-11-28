@@ -259,9 +259,9 @@ class DeformConv2d(nn.Module):
 
         # (b, c, h, w, N)
         x_offset = g_lt.unsqueeze(dim=1) * x_q_lt + \
-                   g_rb.unsqueeze(dim=1) * x_q_rb + \
-                   g_lb.unsqueeze(dim=1) * x_q_lb + \
-                   g_rt.unsqueeze(dim=1) * x_q_rt
+                       g_rb.unsqueeze(dim=1) * x_q_rb + \
+                       g_lb.unsqueeze(dim=1) * x_q_lb + \
+                       g_rt.unsqueeze(dim=1) * x_q_rt
 
         # modulation
         if self.modulation:
@@ -271,9 +271,7 @@ class DeformConv2d(nn.Module):
             x_offset *= m
 
         x_offset = self._reshape_x_offset(x_offset, ks)
-        out = self.conv(x_offset)
-
-        return out
+        return self.conv(x_offset)
 
     def _get_p_n(self, N, dtype):
         p_n_x, p_n_y = torch.meshgrid(
@@ -291,9 +289,7 @@ class DeformConv2d(nn.Module):
             torch.arange(1, w*self.stride+1, self.stride))
         p_0_x = torch.flatten(p_0_x).view(1, 1, h, w).repeat(1, N, 1, 1)
         p_0_y = torch.flatten(p_0_y).view(1, 1, h, w).repeat(1, N, 1, 1)
-        p_0 = torch.cat([p_0_x, p_0_y], 1).type(dtype)
-
-        return p_0
+        return torch.cat([p_0_x, p_0_y], 1).type(dtype)
 
     def _get_p(self, offset, dtype):
         N, h, w = offset.size(1)//2, offset.size(2), offset.size(3)
@@ -302,8 +298,7 @@ class DeformConv2d(nn.Module):
         p_n = self._get_p_n(N, dtype)
         # (1, 2N, h, w)
         p_0 = self._get_p_0(h, w, N, dtype)
-        p = p_0 + p_n + offset
-        return p
+        return p_0 + p_n + offset
 
     def _get_x_q(self, x, q, N):
         b, h, w, _ = q.size()
@@ -317,9 +312,7 @@ class DeformConv2d(nn.Module):
         # (b, c, h*w*N)
         index = index.contiguous().unsqueeze(dim=1).expand(-1, c, -1, -1, -1).contiguous().view(b, c, -1)
 
-        x_offset = x.gather(dim=-1, index=index).contiguous().view(b, c, h, w, N)
-
-        return x_offset
+        return x.gather(dim=-1, index=index).contiguous().view(b, c, h, w, N)
 
     @staticmethod
     def _reshape_x_offset(x_offset, ks):

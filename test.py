@@ -155,7 +155,7 @@ def test(data,
                 for *xyxy, conf, cls in x:
                     xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
                     line = (cls, *xywh, conf) if save_conf else (cls, *xywh)  # label format
-                    with open(save_dir / 'labels' / (path.stem + '.txt'), 'a') as f:
+                    with open(save_dir / 'labels' / f'{path.stem}.txt', 'a') as f:
                         f.write(('%g ' * len(line)).rstrip() % line + '\n')
 
             # W&B logging
@@ -277,11 +277,11 @@ def test(data,
             eval.summarize()
             map, map50 = eval.stats[:2]  # update results (mAP@0.5:0.95, mAP@0.5)
         except Exception as e:
-            print('ERROR: pycocotools unable to run: %s' % e)
+            print(f'ERROR: pycocotools unable to run: {e}')
 
     # Return results
     if not training:
-        print('Results saved to %s' % save_dir)
+        print(f'Results saved to {save_dir}')
     model.float()  # for training
     maps = np.zeros(nc) + map
     for i, c in enumerate(ap_class):
@@ -332,7 +332,7 @@ if __name__ == '__main__':
 
     elif opt.task == 'study':  # run over a range of settings and save/plot
         for weights in ['yolov4-pacsp.weights', 'yolov4-pacsp-x.weishts']:
-            f = 'study_%s_%s.txt' % (Path(opt.data).stem, Path(weights).stem)  # filename to save to
+            f = f'study_{Path(opt.data).stem}_{Path(weights).stem}.txt'
             x = list(range(320, 800, 64))  # x axis
             y = []  # y axis
             for i in x:  # img-size

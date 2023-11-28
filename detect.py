@@ -119,7 +119,7 @@ def detect(save_img=False):
                 for *xyxy, conf, cls in det:
                     if save_txt:  # Write to file
                         xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
-                        with open(txt_path + '.txt', 'a') as f:
+                        with open(f'{txt_path}.txt', 'a') as f:
                             f.write(('%g ' * 5 + '\n') % (cls, *xywh))  # label format
 
                     if save_img or view_img:  # Add bbox to image
@@ -153,9 +153,9 @@ def detect(save_img=False):
                     vid_writer.write(im0)
 
     if save_txt or save_img:
-        print('Results saved to %s' % Path(out))
+        print(f'Results saved to {Path(out)}')
         if platform == 'darwin' and not opt.update:  # MacOS
-            os.system('open ' + save_path)
+            os.system(f'open {save_path}')
 
     print('Done. (%.3fs)' % (time.time() - t0))
 

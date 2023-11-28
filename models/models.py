@@ -90,7 +90,7 @@ def create_modules(module_defs, img_size, cfg):
                 modules.add_module('activation', Mish())
             elif mdef['activation'] == 'silu':
                 modules.add_module('activation', nn.SiLU())
-                
+
         elif mdef['type'] == 'dropout':
             p = mdef['probability']
             modules = nn.Dropout(p)
@@ -151,25 +151,25 @@ def create_modules(module_defs, img_size, cfg):
 
         elif mdef['type'] == 'route':  # nn.Sequential() placeholder for 'route' layer
             layers = mdef['layers']
-            filters = sum([output_filters[l + 1 if l > 0 else l] for l in layers])
+            filters = sum(output_filters[l + 1 if l > 0 else l] for l in layers)
             routs.extend([i + l if l < 0 else l for l in layers])
             modules = FeatureConcat(layers=layers)
 
         elif mdef['type'] == 'route2':  # nn.Sequential() placeholder for 'route' layer
             layers = mdef['layers']
-            filters = sum([output_filters[l + 1 if l > 0 else l] for l in layers])
+            filters = sum(output_filters[l + 1 if l > 0 else l] for l in layers)
             routs.extend([i + l if l < 0 else l for l in layers])
             modules = FeatureConcat2(layers=layers)
 
         elif mdef['type'] == 'route3':  # nn.Sequential() placeholder for 'route' layer
             layers = mdef['layers']
-            filters = sum([output_filters[l + 1 if l > 0 else l] for l in layers])
+            filters = sum(output_filters[l + 1 if l > 0 else l] for l in layers)
             routs.extend([i + l if l < 0 else l for l in layers])
             modules = FeatureConcat3(layers=layers)
 
         elif mdef['type'] == 'route_lhalf':  # nn.Sequential() placeholder for 'route' layer
             layers = mdef['layers']
-            filters = sum([output_filters[l + 1 if l > 0 else l] for l in layers])//2
+            filters = sum(output_filters[l + 1 if l > 0 else l] for l in layers) // 2
             routs.extend([i + l if l < 0 else l for l in layers])
             modules = FeatureConcat_l(layers=layers)
 
@@ -208,7 +208,7 @@ def create_modules(module_defs, img_size, cfg):
                 bias.data[:, 4] += math.log(8 / (640 / stride[yolo_index]) ** 2)  # obj (8 objects per 640 image)
                 bias.data[:, 5:] += math.log(0.6 / (modules.nc - 0.99))  # cls (sigmoid(p) = 1/nc)
                 module_list[j][0].bias = torch.nn.Parameter(bias_, requires_grad=bias_.requires_grad)
-                
+
                 #j = [-2, -5, -8]
                 #for sj in j:
                 #    bias_ = module_list[sj][0].bias
@@ -462,31 +462,30 @@ class Darknet(nn.Module):
 
         if not augment:
             return self.forward_once(x)
-        else:  # Augment images (inference and test only) https://github.com/ultralytics/yolov3/issues/931
-            img_size = x.shape[-2:]  # height, width
-            s = [0.83, 0.67]  # scales
-            y = []
-            for i, xi in enumerate((x,
-                                    torch_utils.scale_img(x.flip(3), s[0], same_shape=False),  # flip-lr and scale
-                                    torch_utils.scale_img(x, s[1], same_shape=False),  # scale
-                                    )):
-                # cv2.imwrite('img%g.jpg' % i, 255 * xi[0].numpy().transpose((1, 2, 0))[:, :, ::-1])
-                y.append(self.forward_once(xi)[0])
+        img_size = x.shape[-2:]  # height, width
+        s = [0.83, 0.67]  # scales
+        y = [
+            self.forward_once(xi)[0]
+            for xi in (
+                x,
+                torch_utils.scale_img(x.flip(3), s[0], same_shape=False),
+                torch_utils.scale_img(x, s[1], same_shape=False),
+            )
+        ]
+        y[1][..., :4] /= s[0]  # scale
+        y[1][..., 0] = img_size[1] - y[1][..., 0]  # flip lr
+        y[2][..., :4] /= s[1]  # scale
 
-            y[1][..., :4] /= s[0]  # scale
-            y[1][..., 0] = img_size[1] - y[1][..., 0]  # flip lr
-            y[2][..., :4] /= s[1]  # scale
+        # for i, yi in enumerate(y):  # coco small, medium, large = < 32**2 < 96**2 <
+        #     area = yi[..., 2:4].prod(2)[:, :, None]
+        #     if i == 1:
+        #         yi *= (area < 96. ** 2).float()
+        #     elif i == 2:
+        #         yi *= (area > 32. ** 2).float()
+        #     y[i] = yi
 
-            # for i, yi in enumerate(y):  # coco small, medium, large = < 32**2 < 96**2 <
-            #     area = yi[..., 2:4].prod(2)[:, :, None]
-            #     if i == 1:
-            #         yi *= (area < 96. ** 2).float()
-            #     elif i == 2:
-            #         yi *= (area > 32. ** 2).float()
-            #     y[i] = yi
-
-            y = torch.cat(y, 1)
-            return y, None
+        y = torch.cat(y, 1)
+        return y, None
 
     def forward_once(self, x, augment=False, verbose=False):
         img_size = x.shape[-2:]  # height, width
@@ -587,7 +586,7 @@ def load_darknet_weights(self, weights, cutoff=-1):
         weights = np.fromfile(f, dtype=np.float32)  # the rest are weights
 
     ptr = 0
-    for i, (mdef, module) in enumerate(zip(self.module_defs[:cutoff], self.module_list[:cutoff])):
+    for mdef, module in zip(self.module_defs[:cutoff], self.module_list[:cutoff]):
         if mdef['type'] == 'convolutional':
             conv = module[0]
             if mdef['batch_normalize']:
@@ -605,13 +604,12 @@ def load_darknet_weights(self, weights, cutoff=-1):
                 ptr += nb
                 # Running Var
                 bn.running_var.data.copy_(torch.from_numpy(weights[ptr:ptr + nb]).view_as(bn.running_var))
-                ptr += nb
             else:
                 # Load conv. bias
                 nb = conv.bias.numel()
                 conv_b = torch.from_numpy(weights[ptr:ptr + nb]).view_as(conv.bias)
                 conv.bias.data.copy_(conv_b)
-                ptr += nb
+            ptr += nb
             # Load conv. weights
             nw = conv.weight.numel()  # number of weights
             conv.weight.data.copy_(torch.from_numpy(weights[ptr:ptr + nw]).view_as(conv.weight))
@@ -627,7 +625,7 @@ def save_weights(self, path='model.weights', cutoff=-1):
         self.seen.tofile(f)  # (int64) number of images seen during training
 
         # Iterate through layers
-        for i, (mdef, module) in enumerate(zip(self.module_defs[:cutoff], self.module_list[:cutoff])):
+        for mdef, module in zip(self.module_defs[:cutoff], self.module_list[:cutoff]):
             if mdef['type'] == 'convolutional':
                 conv_layer = module[0]
                 # If batch norm, load bn first
@@ -661,7 +659,7 @@ def convert(cfg='cfg/yolov3-spp.cfg', weights='weights/yolov3-spp.weights', save
 def attempt_download(weights):
     # Attempt to download pretrained weights if not found locally
     weights = weights.strip()
-    msg = weights + ' missing, try downloading from https://drive.google.com/open?id=1LezFG5g3BCW6iYaV89B2i64cqEUZD7e0'
+    msg = f'{weights} missing, try downloading from https://drive.google.com/open?id=1LezFG5g3BCW6iYaV89B2i64cqEUZD7e0'
 
     if len(weights) > 0 and not os.path.isfile(weights):
         d = {''}
@@ -670,11 +668,11 @@ def attempt_download(weights):
         if file in d:
             r = gdrive_download(id=d[file], name=weights)
         else:  # download from pjreddie.com
-            url = 'https://pjreddie.com/media/files/' + file
-            print('Downloading ' + url)
-            r = os.system('curl -f ' + url + ' -o ' + weights)
+            url = f'https://pjreddie.com/media/files/{file}'
+            print(f'Downloading {url}')
+            r = os.system(f'curl -f {url} -o {weights}')
 
         # Error check
         if not (r == 0 and os.path.exists(weights) and os.path.getsize(weights) > 1E6):  # weights exist and > 1MB
-            os.system('rm ' + weights)  # remove partial downloads
+            os.system(f'rm {weights}')
             raise Exception(msg)
